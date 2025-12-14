@@ -1,0 +1,1 @@
+# masterdetails-terraform-azure
