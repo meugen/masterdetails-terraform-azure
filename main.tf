@@ -1,27 +1,18 @@
 terraform {
-  required_version = "~> 1.14" # Ensure that the Terraform version is 1.0.0 or higher
+  required_version = "~> 1.14"
 
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm" # Specify the source of the AWS provider
-      version = "~> 4.0"        # Use a version of the AWS provider that is compatible with version
-    }
-  }
-}
-
-terraform {
   backend "azurerm" {
+    resource_group_name  = "common"
     storage_account_name = "meugeninua"
-    container_name = "tfstate"
-    key = "terraform.tfstate"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
   }
 }
 
-provider "azurerm" {
-  features {}
+module "masterdetails" {
+  source = "./masterdetails"
 }
 
-resource "azurerm_resource_group" "example" {
-  name     = "example-resources"
-  location = "West Europe"
+output "url" {
+  value = module.masterdetails.url
 }
