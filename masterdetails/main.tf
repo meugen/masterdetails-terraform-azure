@@ -42,6 +42,14 @@ resource "azurerm_subnet" "network_app_subnet" {
   service_endpoints = [
     "Microsoft.KeyVault"
   ]
+
+  delegation {
+    name = "${local.app_name}-app-delegation"
+
+    service_delegation {
+      name = "Microsoft.Web/serverFarms"
+    }
+  }
 }
 
 resource "azurerm_subnet" "network_db_subnet" {
@@ -53,6 +61,14 @@ resource "azurerm_subnet" "network_db_subnet" {
   service_endpoints = [
     "Microsoft.Storage"
   ]
+
+  delegation {
+    name = "${local.app_name}-db-delegation"
+
+    service_delegation {
+      name = "Microsoft.DBforPostgreSQL/flexibleServers"
+    }
+  }
 }
 
 # resource "azurerm_subnet" "network_cache_subnet" {
@@ -86,7 +102,7 @@ resource "azurerm_key_vault" "vault" {
   public_network_access_enabled = true
 
   network_acls {
-    bypass         = "None"
+    bypass         = "AzureServices"
     default_action = "Deny"
     ip_rules = [
       "94.158.95.152/32"
@@ -199,7 +215,7 @@ resource "azurerm_linux_web_app" "masterdetails" {
 
   site_config {
     application_stack {
-      docker_image_name   = "meugen/masterdetails:main"
+      docker_image_name   = "meugen/masterdetails-service:azure-deployment"
       docker_registry_url = "https://ghcr.io"
     }
   }
