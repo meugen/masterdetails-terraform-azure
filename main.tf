@@ -11,6 +11,9 @@ terraform {
 
 module "masterdetails" {
   source = "./masterdetails"
+
+  github_username = var.github_username
+  github_password = var.github_password
 }
 
 output "url" {

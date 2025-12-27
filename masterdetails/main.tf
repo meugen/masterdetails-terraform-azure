@@ -130,7 +130,7 @@ resource "azurerm_key_vault_secret" "db_password_secret" {
   key_vault_id     = azurerm_key_vault.vault.id
   name             = "${local.app_name}-db-admin-password"
   value_wo         = ephemeral.random_password.db_admin_password.result
-  value_wo_version = 1
+  value_wo_version = local.db_password_version
 }
 
 resource "azurerm_private_dns_zone" "db_dns_zone" {
@@ -154,7 +154,7 @@ resource "azurerm_postgresql_flexible_server" "masterdetails_db_server" {
   version                           = "17"
   administrator_login               = "masterdetails"
   administrator_password_wo         = ephemeral.random_password.db_admin_password.result
-  administrator_password_wo_version = 1
+  administrator_password_wo_version = local.db_password_version
   sku_name                          = "B_Standard_B1ms"
   storage_mb                        = 32768
   backup_retention_days             = 7
@@ -162,6 +162,7 @@ resource "azurerm_postgresql_flexible_server" "masterdetails_db_server" {
   create_mode                       = "Default"
   delegated_subnet_id               = azurerm_subnet.network_db_subnet.id
   private_dns_zone_id               = azurerm_private_dns_zone.db_dns_zone.id
+  zone                              = "1"
 
   authentication {
     password_auth_enabled = true
@@ -215,8 +216,16 @@ resource "azurerm_linux_web_app" "masterdetails" {
 
   site_config {
     application_stack {
-      docker_image_name   = "meugen/masterdetails-service:azure-deployment"
-      docker_registry_url = "https://ghcr.io"
+      docker_image_name        = "meugen/masterdetails-service:azure-deployment"
+      docker_registry_url      = "https://ghcr.io"
+      docker_registry_username = var.github_username
+      docker_registry_password = var.github_password
+    }
+  }
+
+  logs {
+    application_logs {
+      file_system_level = "Verbose"
     }
   }
 }
