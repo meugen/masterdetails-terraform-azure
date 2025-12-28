@@ -205,62 +205,62 @@ data "azurerm_key_vault_secret" "github_password_secret" {
   key_vault_id = data.azurerm_key_vault.github_tokens_vault.id
 }
 
-resource "azurerm_storage_account" "logs_account" {
-  account_replication_type = "LRS"
-  account_tier             = "Standard"
-  location                 = local.location
-  name                     = "${local.app_name_short}storage${random_string.suffix.result}"
-  resource_group_name      = azurerm_resource_group.masterdetails.name
+# resource "azurerm_storage_account" "logs_account" {
+#   account_replication_type = "LRS"
+#   account_tier             = "Standard"
+#   location                 = local.location
+#   name                     = "${local.app_name_short}storage${random_string.suffix.result}"
+#   resource_group_name      = azurerm_resource_group.masterdetails.name
+#
+#   network_rules {
+#     default_action = "Deny"
+#     bypass = ["AzureServices", "Logging"]
+#     virtual_network_subnet_ids = [
+#       azurerm_subnet.network_app_subnet.id
+#     ]
+#   }
+# }
+#
+# resource "azurerm_storage_container" "logs_container" {
+#   name = "${local.app_name}-app-logs"
+#   storage_account_id = azurerm_storage_account.logs_account.id
+#   container_access_type = "private"
+# }
+#
+# data "azurerm_storage_account_sas" "logs_account_sas" {
+#   connection_string = azurerm_storage_account.logs_account.primary_connection_string
+#   https_only        = true
+#   start             = "2024-01-01"
+#   expiry            = "2034-01-01"
+#
+#   resource_types {
+#     service   = false
+#     container = true
+#     object    = true
+#   }
+#
+#   services {
+#     blob  = true
+#     queue = false
+#     table = false
+#     file  = false
+#   }
+#
+#   permissions {
+#     read    = true
+#     write   = true
+#     delete  = true
+#     list    = true
+#     add     = false
+#     create  = false
+#     update  = false
+#     process = false
+#     filter = false
+#     tag     = false
+#   }
+# }
 
-  network_rules {
-    default_action = "Deny"
-    bypass = ["AzureServices", "Logging"]
-    virtual_network_subnet_ids = [
-      azurerm_subnet.network_app_subnet.id
-    ]
-  }
-}
-
-resource "azurerm_storage_container" "logs_container" {
-  name = "${local.app_name}-app-logs"
-  storage_account_id = azurerm_storage_account.logs_account.id
-  container_access_type = "private"
-}
-
-data "azurerm_storage_account_sas" "logs_account_sas" {
-  connection_string = azurerm_storage_account.logs_account.primary_connection_string
-  https_only        = true
-  start             = "2024-01-01"
-  expiry            = "2034-01-01"
-
-  resource_types {
-    service   = false
-    container = true
-    object    = true
-  }
-
-  services {
-    blob  = true
-    queue = false
-    table = false
-    file  = false
-  }
-
-  permissions {
-    read    = true
-    write   = true
-    delete  = true
-    list    = true
-    add     = false
-    create  = false
-    update  = false
-    process = false
-    filter = false
-    tag     = false
-  }
-}
-
-resource "azurerm_linux_web_app" "masterdetails" {
+resource "azurerm_windows_web_app" "masterdetails" {
   name                          = "${local.app_name}-app-${random_string.suffix.result}"
   resource_group_name           = azurerm_resource_group.masterdetails.name
   location                      = local.location
@@ -293,15 +293,25 @@ resource "azurerm_linux_web_app" "masterdetails" {
     application_logs {
       file_system_level = "Verbose"
 
-      azure_blob_storage {
-        level             = "Verbose"
-        retention_in_days = 0
-        sas_url = "https://${azurerm_storage_account.logs_account.name}.blob.core.windows.net/${azurerm_storage_container.logs_container.name}${data.azurerm_storage_account_sas.logs_account_sas.sas}&sr=b"
+      # azure_blob_storage {
+      #   level             = "Verbose"
+      #   retention_in_days = 0
+      #   sas_url = "https://${azurerm_storage_account.logs_account.name}.blob.core.windows.net/${azurerm_storage_container.logs_container.name}${data.azurerm_storage_account_sas.logs_account_sas.sas}&sr=b"
+      # }
+    }
+
+    detailed_error_messages = true
+    failed_request_tracing = true
+
+    http_logs {
+      file_system {
+        retention_in_days = 7
+        retention_in_mb   = 35
       }
     }
   }
 }
 
 output "url" {
-  value = azurerm_linux_web_app.masterdetails.default_hostname
+  value = azurerm_windows_web_app.masterdetails.default_hostname
 }
