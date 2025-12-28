@@ -260,7 +260,7 @@ data "azurerm_key_vault_secret" "github_password_secret" {
 #   }
 # }
 
-resource "azurerm_windows_web_app" "masterdetails" {
+resource "azurerm_linux_web_app" "masterdetails" {
   name                          = "${local.app_name}-app-${random_string.suffix.result}"
   resource_group_name           = azurerm_resource_group.masterdetails.name
   location                      = local.location
@@ -313,5 +313,5 @@ resource "azurerm_windows_web_app" "masterdetails" {
 }
 
 output "url" {
-  value = azurerm_windows_web_app.masterdetails.default_hostname
+  value = azurerm_linux_web_app.masterdetails.default_hostname
 }
