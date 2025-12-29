@@ -270,14 +270,14 @@ resource "azurerm_linux_web_app" "masterdetails" {
   virtual_network_subnet_id     = azurerm_subnet.network_app_subnet.id
 
   app_settings = {
-    PGSQL_HOSTNAME  = azurerm_postgresql_flexible_server.masterdetails_db_server.fqdn
-    PGSQL_DATABASE  = azurerm_postgresql_flexible_server_database.masterdetails_database.name
-    PGSQL_USERNAME  = azurerm_postgresql_flexible_server.masterdetails_db_server.administrator_login
-    AZ_PGSQL_SECRET = azurerm_key_vault_secret.db_password_secret.name
-    AZ_VAULT_URI    = azurerm_key_vault.vault.vault_uri
-    REDIS_HOSTNAME  = azurerm_redis_cache.redis.hostname
-    REDIS_PORT      = azurerm_redis_cache.redis.port
-    REDIS_USE_SSL   = true
+    "PGSQL_HOSTNAME"  = azurerm_postgresql_flexible_server.masterdetails_db_server.fqdn
+    "PGSQL_DATABASE"  = azurerm_postgresql_flexible_server_database.masterdetails_database.name
+    "PGSQL_USERNAME"  = azurerm_postgresql_flexible_server.masterdetails_db_server.administrator_login
+    "AZ_PGSQL_SECRET" = azurerm_key_vault_secret.db_password_secret.name
+    "AZ_VAULT_URI"    = azurerm_key_vault.vault.vault_uri
+    "REDIS_HOSTNAME"  = azurerm_redis_cache.redis.hostname
+    "REDIS_PORT"      = azurerm_redis_cache.redis.port
+    "REDIS_USE_SSL"   = "true"
   }
 
   site_config {
@@ -301,7 +301,7 @@ resource "azurerm_linux_web_app" "masterdetails" {
     }
 
     detailed_error_messages = true
-    failed_request_tracing = true
+    failed_request_tracing  = true
 
     http_logs {
       file_system {
