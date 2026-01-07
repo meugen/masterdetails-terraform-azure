@@ -282,11 +282,21 @@ resource "azurerm_linux_web_app" "masterdetails" {
 
   site_config {
     application_stack {
-      docker_image_name        = "meugen/masterdetails-service:azure-deployment"
-      docker_registry_url      = "https://ghcr.io"
-      docker_registry_username = var.github_username
-      docker_registry_password = data.azurerm_key_vault_secret.github_password_secret.value
+      # docker_image_name        = "meugen/masterdetails-service:azure-deployment"
+      # docker_registry_url      = "https://ghcr.io"
+      # docker_registry_username = var.github_username
+      # docker_registry_password = data.azurerm_key_vault_secret.github_password_secret.value
+
+      java_server = "JAVA"
+      java_server_version = "21"
     }
+
+#     app_command_line = <<CMD
+# docker run -e PGSQL_HOSTNAME -e PGSQL_DATABASE -e PGSQL_USERNAME \
+# -e AZ_PGSQL_SECRET -e AZ_VAULT_URI \
+# -e REDIS_HOSTNAME -e REDIS_PORT -e REDIS_USE_SSL \
+# -p 80:8080 ghcr.io/meugen/masterdetails-service:azure-deployment
+# CMD
   }
 
   logs {
