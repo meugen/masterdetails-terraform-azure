@@ -187,14 +187,6 @@ resource "azurerm_redis_cache" "redis" {
   public_network_access_enabled = false
 }
 
-resource "azurerm_service_plan" "masterdetails" {
-  location            = local.location
-  name                = "${local.app_name}-plan-${random_string.suffix.result}"
-  os_type             = "Linux"
-  resource_group_name = azurerm_resource_group.masterdetails.name
-  sku_name            = "B1"
-}
-
 data "azurerm_key_vault" "github_tokens_vault" {
   name                = var.github_vault_name
   resource_group_name = var.github_vault_group
@@ -205,123 +197,74 @@ data "azurerm_key_vault_secret" "github_password_secret" {
   key_vault_id = data.azurerm_key_vault.github_tokens_vault.id
 }
 
-# resource "azurerm_storage_account" "logs_account" {
-#   account_replication_type = "LRS"
-#   account_tier             = "Standard"
-#   location                 = local.location
-#   name                     = "${local.app_name_short}storage${random_string.suffix.result}"
-#   resource_group_name      = azurerm_resource_group.masterdetails.name
-#
-#   network_rules {
-#     default_action = "Deny"
-#     bypass = ["AzureServices", "Logging"]
-#     virtual_network_subnet_ids = [
-#       azurerm_subnet.network_app_subnet.id
-#     ]
-#   }
-# }
-#
-# resource "azurerm_storage_container" "logs_container" {
-#   name = "${local.app_name}-app-logs"
-#   storage_account_id = azurerm_storage_account.logs_account.id
-#   container_access_type = "private"
-# }
-#
-# data "azurerm_storage_account_sas" "logs_account_sas" {
-#   connection_string = azurerm_storage_account.logs_account.primary_connection_string
-#   https_only        = true
-#   start             = "2024-01-01"
-#   expiry            = "2034-01-01"
-#
-#   resource_types {
-#     service   = false
-#     container = true
-#     object    = true
-#   }
-#
-#   services {
-#     blob  = true
-#     queue = false
-#     table = false
-#     file  = false
-#   }
-#
-#   permissions {
-#     read    = true
-#     write   = true
-#     delete  = true
-#     list    = true
-#     add     = false
-#     create  = false
-#     update  = false
-#     process = false
-#     filter = false
-#     tag     = false
-#   }
-# }
+resource "azurerm_log_analytics_workspace" "masterdetails" {
+  location            = local.location
+  name                = "${local.app_name}-law-${random_string.suffix.result}"
+  resource_group_name = azurerm_resource_group.masterdetails.name
+}
 
-resource "azurerm_linux_web_app" "masterdetails" {
-  name                          = "${local.app_name}-app-${random_string.suffix.result}"
-  resource_group_name           = azurerm_resource_group.masterdetails.name
-  location                      = local.location
-  service_plan_id               = azurerm_service_plan.masterdetails.id
-  https_only                    = true
-  public_network_access_enabled = true
-  virtual_network_subnet_id     = azurerm_subnet.network_app_subnet.id
+resource "azurerm_container_group" "masterdetails" {
+  name                = "${local.app_name}-app-${random_string.suffix.result}"
+  resource_group_name = azurerm_resource_group.masterdetails.name
+  location            = local.location
+  os_type             = "Linux"
+  restart_policy      = "Always"
+  ip_address_type     = "Public"
 
-  app_settings = {
-    "PGSQL_HOSTNAME"  = azurerm_postgresql_flexible_server.masterdetails_db_server.fqdn
-    "PGSQL_DATABASE"  = azurerm_postgresql_flexible_server_database.masterdetails_database.name
-    "PGSQL_USERNAME"  = azurerm_postgresql_flexible_server.masterdetails_db_server.administrator_login
-    "AZ_PGSQL_SECRET" = azurerm_key_vault_secret.db_password_secret.name
-    "AZ_VAULT_URI"    = azurerm_key_vault.vault.vault_uri
-    "REDIS_HOSTNAME"  = azurerm_redis_cache.redis.hostname
-    "REDIS_PORT"      = azurerm_redis_cache.redis.port
-    "REDIS_USE_SSL"   = "true"
+  exposed_port {
+    port     = 8080
+    protocol = "TCP"
   }
 
-  site_config {
-    application_stack {
-      # docker_image_name        = "meugen/masterdetails-service:azure-deployment"
-      # docker_registry_url      = "https://ghcr.io"
-      # docker_registry_username = var.github_username
-      # docker_registry_password = data.azurerm_key_vault_secret.github_password_secret.value
-
-      java_server = "JAVA"
-      java_server_version = "21"
-    }
-
-#     app_command_line = <<CMD
-# docker run -e PGSQL_HOSTNAME -e PGSQL_DATABASE -e PGSQL_USERNAME \
-# -e AZ_PGSQL_SECRET -e AZ_VAULT_URI \
-# -e REDIS_HOSTNAME -e REDIS_PORT -e REDIS_USE_SSL \
-# -p 80:8080 ghcr.io/meugen/masterdetails-service:azure-deployment
-# CMD
+  image_registry_credential {
+    server   = "ghcr.io"
+    username = var.github_username
+    password = data.azurerm_key_vault_secret.github_password_secret.value
   }
 
-  logs {
-    application_logs {
-      file_system_level = "Verbose"
+  container {
+    cpu    = 2
+    image  = "ghcr.io/meugen/masterdetails-service:azure-deployment"
+    memory = 1
+    name   = "masterdetails-service"
 
-      # azure_blob_storage {
-      #   level             = "Verbose"
-      #   retention_in_days = 0
-      #   sas_url = "https://${azurerm_storage_account.logs_account.name}.blob.core.windows.net/${azurerm_storage_container.logs_container.name}${data.azurerm_storage_account_sas.logs_account_sas.sas}&sr=b"
-      # }
+    environment_variables = {
+      "PGSQL_HOSTNAME"  = azurerm_postgresql_flexible_server.masterdetails_db_server.fqdn
+      "PGSQL_DATABASE"  = azurerm_postgresql_flexible_server_database.masterdetails_database.name
+      "PGSQL_USERNAME"  = azurerm_postgresql_flexible_server.masterdetails_db_server.administrator_login
+      "AZ_PGSQL_SECRET" = azurerm_key_vault_secret.db_password_secret.name
+      "AZ_VAULT_URI"    = azurerm_key_vault.vault.vault_uri
+      "REDIS_HOSTNAME"  = azurerm_redis_cache.redis.hostname
+      "REDIS_PORT"      = azurerm_redis_cache.redis.port
+      "REDIS_USE_SSL"   = "true"
     }
 
-    detailed_error_messages = true
-    failed_request_tracing  = true
+    ports {
+      port     = 8080
+      protocol = "TCP"
+    }
 
-    http_logs {
-      file_system {
-        retention_in_days = 7
-        retention_in_mb   = 35
+    readiness_probe {
+      http_get {
+        path = "/actuator/health"
+        port = 8080
       }
+      initial_delay_seconds = 10
+      period_seconds        = 5
+    }
+
+  }
+
+  diagnostics {
+    log_analytics {
+      workspace_id  = azurerm_log_analytics_workspace.masterdetails.workspace_id
+      workspace_key = azurerm_log_analytics_workspace.masterdetails.primary_shared_key
+      log_type = "ContainerInsights"
     }
   }
+
 }
 
 output "url" {
-  value = azurerm_linux_web_app.masterdetails.default_hostname
+  value = azurerm_container_group.masterdetails.fqdn
 }
