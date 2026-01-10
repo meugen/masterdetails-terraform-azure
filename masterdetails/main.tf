@@ -207,7 +207,7 @@ resource "azurerm_container_app_environment" "masterdetails" {
   resource_group_name        = azurerm_resource_group.masterdetails.name
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.masterdetails.id
-  infrastructure_subnet_id = azurerm_subnet.network_app_subnet.id
+  infrastructure_subnet_id   = azurerm_subnet.network_app_subnet.id
 }
 
 resource "azurerm_container_app" "masterdetails" {
